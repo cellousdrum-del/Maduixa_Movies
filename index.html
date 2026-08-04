@@ -1,0 +1,634 @@
+<!doctype html>
+<html lang="ca">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>Maduixa Movies</title>
+<meta name="description" content="El registre de pel·lícules que veiem junts, en directe entre els dos mòbils.">
+
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Maduixa">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#E0334F">
+
+<style>
+  :root{
+    --bg:#FFF3F5;
+    --primary:#E0334F;
+    --primary-dark:#C81E3A;
+    --primary-light:#FFD9DF;
+    --accent:#4C9A6A;
+    --accent-dark:#3C7A52;
+    --card:#FFFBF8;
+    --text:#3A2323;
+    --muted:#8A6A6A;
+    --border:rgba(58,35,35,0.10);
+    --shadow:0 4px 14px rgba(224,51,79,0.12);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    min-height:100vh;
+    padding-top:env(safe-area-inset-top);
+    padding-bottom:env(safe-area-inset-bottom);
+  }
+  .app{
+    max-width:520px;
+    margin:0 auto;
+    padding:0 16px 48px;
+  }
+  header{
+    text-align:center;
+    padding:28px 16px 12px;
+  }
+  header h1{
+    margin:0;
+    font-size:1.7rem;
+    font-weight:800;
+    letter-spacing:-0.02em;
+  }
+  header p{
+    margin:6px 0 0;
+    color:var(--muted);
+    font-size:0.88rem;
+  }
+  #sync-status{
+    display:inline-block;
+    margin-top:8px;
+    font-size:0.78rem;
+    padding:3px 10px;
+    border-radius:999px;
+    background:var(--primary-light);
+    color:var(--primary-dark);
+    font-weight:600;
+  }
+
+  .banner{
+    background:#FFF6D6;
+    border:1px solid #E8C34A;
+    color:#5A4A10;
+    padding:12px 14px;
+    border-radius:12px;
+    font-size:0.85rem;
+    margin:0 0 16px;
+    line-height:1.4;
+  }
+  .banner code{
+    background:rgba(0,0,0,0.06);
+    padding:1px 5px;
+    border-radius:4px;
+  }
+
+  .tabs{
+    display:flex;
+    gap:8px;
+    background:var(--primary-light);
+    padding:5px;
+    border-radius:14px;
+    margin-bottom:18px;
+  }
+  .tab-btn{
+    flex:1;
+    border:none;
+    background:transparent;
+    padding:10px 8px;
+    border-radius:10px;
+    font-size:0.92rem;
+    font-weight:700;
+    color:var(--primary-dark);
+    cursor:pointer;
+  }
+  .tab-btn.active{
+    background:var(--primary);
+    color:#fff;
+    box-shadow:var(--shadow);
+  }
+
+  .panel{display:none;}
+  .panel.active{display:block;}
+
+  .stats{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    margin-bottom:16px;
+  }
+  .stat-chip{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:10px 14px;
+    font-size:0.88rem;
+  }
+  .stat-chip.best strong{color:var(--accent-dark);}
+  .stat-chip.worst strong{color:var(--primary-dark);}
+
+  .btn-secondary{
+    width:100%;
+    background:var(--accent);
+    color:#fff;
+    border:none;
+    padding:12px;
+    border-radius:12px;
+    font-size:0.95rem;
+    font-weight:700;
+    margin-bottom:16px;
+    cursor:pointer;
+  }
+  .btn-secondary:active{background:var(--accent-dark);}
+
+  details.add-box{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:14px;
+    margin-bottom:18px;
+    overflow:hidden;
+  }
+  details.add-box summary{
+    list-style:none;
+    cursor:pointer;
+    padding:14px 16px;
+    font-weight:700;
+    color:var(--primary-dark);
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+  }
+  details.add-box summary::-webkit-details-marker{display:none;}
+  details.add-box[open] summary{border-bottom:1px solid var(--border);}
+
+  form{padding:14px 16px 16px;display:flex;flex-direction:column;gap:12px;}
+  label{font-size:0.82rem;font-weight:600;color:var(--muted);display:flex;flex-direction:column;gap:5px;}
+  input[type=text],input[type=date],input[type=number],select,textarea{
+    font-family:inherit;
+    font-size:0.95rem;
+    padding:10px 12px;
+    border-radius:10px;
+    border:1px solid var(--border);
+    background:#fff;
+    color:var(--text);
+  }
+  textarea{resize:vertical;min-height:56px;}
+  .btn-submit{
+    background:var(--primary);
+    color:#fff;
+    border:none;
+    padding:11px;
+    border-radius:10px;
+    font-size:0.95rem;
+    font-weight:700;
+    cursor:pointer;
+  }
+  .btn-submit:active{background:var(--primary-dark);}
+
+  #pending-note{
+    background:var(--primary-light);
+    border-radius:10px;
+    padding:8px 10px;
+    font-size:0.8rem;
+    color:var(--primary-dark);
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:8px;
+  }
+  #pending-note button{
+    background:none;border:none;color:var(--primary-dark);font-weight:700;cursor:pointer;font-size:0.8rem;
+  }
+
+  ul.cards{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px;}
+  .card{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding:12px 14px;
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:8px;
+  }
+  .card-main h3{margin:0 0 4px;font-size:1rem;font-weight:700;}
+  .card-main .meta{margin:0;font-size:0.82rem;color:var(--muted);}
+  .card-main .notes{margin:6px 0 0;font-size:0.82rem;color:var(--text);font-style:italic;}
+  .rating-pill{
+    display:inline-block;
+    background:var(--primary);
+    color:#fff;
+    font-weight:700;
+    padding:1px 8px;
+    border-radius:999px;
+    font-size:0.78rem;
+  }
+  .card-actions{display:flex;gap:8px;margin-top:10px;}
+  .btn-small{
+    background:var(--accent);
+    color:#fff;
+    border:none;
+    padding:7px 10px;
+    border-radius:8px;
+    font-size:0.78rem;
+    font-weight:700;
+    cursor:pointer;
+  }
+  .icon-btn{
+    background:transparent;
+    border:none;
+    color:var(--muted);
+    font-size:1rem;
+    cursor:pointer;
+    padding:4px 6px;
+    line-height:1;
+    flex-shrink:0;
+  }
+  .icon-btn:active{color:var(--primary-dark);}
+
+  .empty{
+    text-align:center;
+    color:var(--muted);
+    font-size:0.88rem;
+    padding:24px 12px;
+  }
+
+  .modal-overlay{
+    position:fixed;inset:0;
+    background:rgba(58,35,35,0.45);
+    display:flex;align-items:center;justify-content:center;
+    padding:20px;
+    z-index:50;
+  }
+  .modal-overlay[hidden]{display:none;}
+  .modal{
+    background:var(--card);
+    border-radius:16px;
+    padding:24px 20px;
+    max-width:360px;
+    width:100%;
+    text-align:center;
+    box-shadow:0 10px 30px rgba(0,0,0,0.2);
+  }
+  .modal h3{margin:0 0 10px;}
+  .modal p{font-size:1.15rem;font-weight:700;color:var(--primary-dark);margin:0 0 18px;}
+  .modal button{
+    background:var(--primary);
+    color:#fff;
+    border:none;
+    padding:10px 22px;
+    border-radius:10px;
+    font-weight:700;
+    cursor:pointer;
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>🍓 Maduixa Movies</h1>
+    <p>El nostre registre de pel·lícules</p>
+    <span id="sync-status">Carregant…</span>
+  </header>
+
+  <div id="setup-banner" class="banner" hidden>
+    ⚠️ Encara falta configurar Firebase. Substitueix l'objecte <code>firebaseConfig</code> a l'<code>index.html</code> per les dades del teu projecte de Firebase perquè l'app pugui desar i sincronitzar les dades.
+  </div>
+
+  <nav class="tabs">
+    <button class="tab-btn active" data-tab="watched">Vistes</button>
+    <button class="tab-btn" data-tab="wishlist">Vull veure</button>
+  </nav>
+
+  <main>
+    <section id="panel-watched" class="panel active">
+      <div class="stats" id="stats-watched"></div>
+
+      <details class="add-box" id="details-watched">
+        <summary>+ Afegeix una pel·lícula vista</summary>
+        <form id="form-watched">
+          <div id="pending-note" hidden>
+            <span>Marcant «<span id="pending-note-title"></span>» com a vista</span>
+            <button type="button" id="cancel-pending">treu l'enllaç</button>
+          </div>
+          <label>Títol
+            <input type="text" id="watched-title" required placeholder="p. ex. Kill Bill Vol. 1">
+          </label>
+          <label>Data de visionat
+            <input type="date" id="watched-date" required>
+          </label>
+          <label>Nota (0–10)
+            <input type="number" id="watched-rating" min="0" max="10" step="0.5" required placeholder="8">
+          </label>
+          <label>La tornaries a veure?
+            <select id="watched-rewatch" required>
+              <option value="si">Sí</option>
+              <option value="no">No</option>
+            </select>
+          </label>
+          <button type="submit" class="btn-submit">Desa la pel·lícula</button>
+        </form>
+      </details>
+
+      <ul class="cards" id="list-watched"></ul>
+      <p class="empty" id="empty-watched" hidden>Encara no heu afegit cap pel·lícula vista.</p>
+    </section>
+
+    <section id="panel-wishlist" class="panel">
+      <button id="btn-random" class="btn-secondary">🎲 Tria'n una a l'atzar</button>
+
+      <details class="add-box" id="details-wishlist">
+        <summary>+ Afegeix a la llista</summary>
+        <form id="form-wishlist">
+          <label>Títol
+            <input type="text" id="wishlist-title" required placeholder="p. ex. Dune: Part Two">
+          </label>
+          <label>Data planejada (opcional)
+            <input type="date" id="wishlist-date">
+          </label>
+          <label>Notes (opcional)
+            <textarea id="wishlist-notes" placeholder="Qui la recomana, per què..."></textarea>
+          </label>
+          <button type="submit" class="btn-submit">Afegeix a la llista</button>
+        </form>
+      </details>
+
+      <ul class="cards" id="list-wishlist"></ul>
+      <p class="empty" id="empty-wishlist" hidden>Encara no hi ha cap pel·lícula a la llista de "Vull veure".</p>
+    </section>
+  </main>
+</div>
+
+<div id="random-modal" class="modal-overlay" hidden>
+  <div class="modal">
+    <h3>🎬 Pel·lícula escollida!</h3>
+    <p id="random-result"></p>
+    <button id="random-close">D'acord</button>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import {
+  getFirestore, collection, doc, addDoc, deleteDoc, getDoc,
+  onSnapshot, serverTimestamp, writeBatch, query, orderBy
+} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+// Replace this with the config from your Firebase project settings (Project settings > General > Your apps > Web app).
+const firebaseConfig = {
+  apiKey: "REPLACE_WITH_YOUR_API_KEY",
+  authDomain: "REPLACE_WITH_YOUR_PROJECT.firebaseapp.com",
+  projectId: "REPLACE_WITH_YOUR_PROJECT",
+  storageBucket: "REPLACE_WITH_YOUR_PROJECT.appspot.com",
+  messagingSenderId: "REPLACE_ME",
+  appId: "REPLACE_ME"
+};
+
+const isConfigured = !!firebaseConfig.apiKey && !firebaseConfig.apiKey.startsWith("REPLACE");
+
+const SEED_WATCHED = [
+  { title: "Kill Bill Vol. 1",      dateWatched: "2026-01-10", rating: 9, rewatch: true  },
+  { title: "Kill Bill Vol. 2",      dateWatched: "2026-01-14", rating: 9, rewatch: true  },
+  { title: "Frankenstein",          dateWatched: "2026-01-24", rating: 8, rewatch: true  },
+  { title: "Arrival",               dateWatched: "2026-01-25", rating: 7, rewatch: false },
+  { title: "The Passengers",        dateWatched: "2026-01-26", rating: 4, rewatch: false },
+  { title: "Hamnet",                dateWatched: "2026-02-14", rating: 6, rewatch: true  },
+  { title: "Back to the Future I",  dateWatched: "2026-06-18", rating: 7, rewatch: false },
+];
+
+let db = null;
+let watchedMovies = [];
+let wishlistMovies = [];
+let pendingWishlistId = null;
+
+const $ = (sel) => document.querySelector(sel);
+
+function escapeHtml(str) {
+  return String(str ?? "").replace(/[&<>"']/g, (c) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+  }[c]));
+}
+
+function formatDate(iso) {
+  if (!iso) return "";
+  const [y, m, d] = iso.split("-");
+  return `${d}/${m}/${y}`;
+}
+
+function setSyncStatus(text) { $("#sync-status").textContent = text; }
+
+function switchTab(tab) {
+  document.querySelectorAll(".tab-btn").forEach((b) => b.classList.toggle("active", b.dataset.tab === tab));
+  document.querySelectorAll(".panel").forEach((p) => p.classList.toggle("active", p.id === "panel-" + tab));
+}
+document.querySelectorAll(".tab-btn").forEach((b) => b.addEventListener("click", () => switchTab(b.dataset.tab)));
+
+function renderStats() {
+  const box = $("#stats-watched");
+  if (watchedMovies.length === 0) { box.innerHTML = ""; return; }
+  let best = watchedMovies[0], worst = watchedMovies[0];
+  watchedMovies.forEach((m) => {
+    if (m.rating > best.rating) best = m;
+    if (m.rating < worst.rating) worst = m;
+  });
+  box.innerHTML = `
+    <div class="stat-chip best">🏆 Millor valorada: <strong>${escapeHtml(best.title)}</strong> (${best.rating}/10)</div>
+    <div class="stat-chip worst">🥲 Pitjor valorada: <strong>${escapeHtml(worst.title)}</strong> (${worst.rating}/10)</div>
+  `;
+}
+
+function watchedCard(m) {
+  const li = document.createElement("li");
+  li.className = "card";
+  li.innerHTML = `
+    <div class="card-main">
+      <h3>${escapeHtml(m.title)}</h3>
+      <p class="meta">${formatDate(m.dateWatched)} · <span class="rating-pill">${m.rating}/10</span> · ${m.rewatch ? "La tornaria a veure 💚" : "No la tornaria a veure"}</p>
+    </div>
+    <button class="icon-btn delete-watched" data-id="${m.id}" aria-label="Elimina">✕</button>
+  `;
+  return li;
+}
+
+function renderWatched() {
+  const list = $("#list-watched");
+  const empty = $("#empty-watched");
+  list.innerHTML = "";
+  if (watchedMovies.length === 0) {
+    empty.hidden = false;
+  } else {
+    empty.hidden = true;
+    watchedMovies.forEach((m) => list.appendChild(watchedCard(m)));
+  }
+  renderStats();
+}
+
+function wishlistCard(m) {
+  const li = document.createElement("li");
+  li.className = "card";
+  li.innerHTML = `
+    <div class="card-main">
+      <h3>${escapeHtml(m.title)}</h3>
+      <p class="meta">${m.plannedDate ? "Prevista pel " + formatDate(m.plannedDate) : "Sense data prevista"}</p>
+      ${m.notes ? `<p class="notes">${escapeHtml(m.notes)}</p>` : ""}
+      <div class="card-actions">
+        <button class="btn-small mark-watched" data-id="${m.id}">✔ Marca com a vista</button>
+        <button class="icon-btn delete-wishlist" data-id="${m.id}" aria-label="Elimina">✕</button>
+      </div>
+    </div>
+  `;
+  return li;
+}
+
+function renderWishlist() {
+  const list = $("#list-wishlist");
+  const empty = $("#empty-wishlist");
+  list.innerHTML = "";
+  if (wishlistMovies.length === 0) {
+    empty.hidden = false;
+  } else {
+    empty.hidden = true;
+    wishlistMovies.forEach((m) => list.appendChild(wishlistCard(m)));
+  }
+}
+
+function startMarkAsWatched(item) {
+  pendingWishlistId = item.id;
+  switchTab("watched");
+  $("#details-watched").open = true;
+  $("#watched-title").value = item.title;
+  $("#pending-note-title").textContent = item.title;
+  $("#pending-note").hidden = false;
+  $("#watched-title").focus();
+  $("#form-watched").scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
+$("#cancel-pending").addEventListener("click", () => {
+  pendingWishlistId = null;
+  $("#pending-note").hidden = true;
+});
+
+$("#list-watched").addEventListener("click", async (e) => {
+  const btn = e.target.closest(".delete-watched");
+  if (!btn || !db) return;
+  if (!confirm("Segur que vols eliminar aquesta pel·lícula?")) return;
+  await deleteDoc(doc(db, "watched", btn.dataset.id));
+});
+
+$("#list-wishlist").addEventListener("click", async (e) => {
+  const delBtn = e.target.closest(".delete-wishlist");
+  if (delBtn) {
+    if (!db) return;
+    if (!confirm('Segur que vols eliminar aquesta pel·lícula de la llista?')) return;
+    await deleteDoc(doc(db, "wishlist", delBtn.dataset.id));
+    return;
+  }
+  const markBtn = e.target.closest(".mark-watched");
+  if (markBtn) {
+    const item = wishlistMovies.find((w) => w.id === markBtn.dataset.id);
+    if (item) startMarkAsWatched(item);
+  }
+});
+
+$("#form-watched").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  if (!db) { alert("Configura Firebase abans d'afegir pel·lícules."); return; }
+  const title = $("#watched-title").value.trim();
+  const date = $("#watched-date").value;
+  const rating = Number($("#watched-rating").value);
+  const rewatch = $("#watched-rewatch").value === "si";
+  if (!title || !date || Number.isNaN(rating)) return;
+  await addDoc(collection(db, "watched"), { title, dateWatched: date, rating, rewatch, createdAt: serverTimestamp() });
+  if (pendingWishlistId) {
+    await deleteDoc(doc(db, "wishlist", pendingWishlistId));
+    pendingWishlistId = null;
+    $("#pending-note").hidden = true;
+  }
+  e.target.reset();
+  $("#watched-date").valueAsDate = new Date();
+  $("#details-watched").open = false;
+});
+
+$("#form-wishlist").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  if (!db) { alert("Configura Firebase abans d'afegir pel·lícules."); return; }
+  const title = $("#wishlist-title").value.trim();
+  const plannedDate = $("#wishlist-date").value || null;
+  const notes = $("#wishlist-notes").value.trim();
+  if (!title) return;
+  await addDoc(collection(db, "wishlist"), { title, plannedDate, notes, createdAt: serverTimestamp() });
+  e.target.reset();
+  $("#details-wishlist").open = false;
+});
+
+$("#btn-random").addEventListener("click", () => {
+  if (wishlistMovies.length === 0) {
+    alert('Encara no hi ha cap pel·lícula a la llista de "Vull veure".');
+    return;
+  }
+  const pick = wishlistMovies[Math.floor(Math.random() * wishlistMovies.length)];
+  $("#random-result").textContent = pick.title;
+  $("#random-modal").hidden = false;
+});
+$("#random-close").addEventListener("click", () => { $("#random-modal").hidden = true; });
+
+async function runMigrationIfNeeded() {
+  try {
+    const metaRef = doc(db, "meta", "migration");
+    const snap = await getDoc(metaRef);
+    if (snap.exists()) return;
+    const batch = writeBatch(db);
+    SEED_WATCHED.forEach((m) => {
+      const ref = doc(collection(db, "watched"));
+      batch.set(ref, { ...m, createdAt: serverTimestamp() });
+    });
+    batch.set(metaRef, { done: true, migratedAt: serverTimestamp() });
+    await batch.commit();
+  } catch (err) {
+    console.error("Migration error", err);
+  }
+}
+
+function listenWatched() {
+  const q = query(collection(db, "watched"), orderBy("dateWatched", "desc"));
+  onSnapshot(q, (snap) => {
+    watchedMovies = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    renderWatched();
+    setSyncStatus("Sincronitzat en viu 🍓");
+  }, (err) => {
+    console.error(err);
+    setSyncStatus("Error de sincronització");
+  });
+}
+
+function listenWishlist() {
+  const q = query(collection(db, "wishlist"), orderBy("createdAt", "desc"));
+  onSnapshot(q, (snap) => {
+    wishlistMovies = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    renderWishlist();
+  }, (err) => console.error(err));
+}
+
+function initApp() {
+  $("#watched-date").valueAsDate = new Date();
+  if (!isConfigured) {
+    $("#setup-banner").hidden = false;
+    setSyncStatus("Sense configurar");
+    renderWatched();
+    renderWishlist();
+    return;
+  }
+  const app = initializeApp(firebaseConfig);
+  db = getFirestore(app);
+  runMigrationIfNeeded().then(() => {
+    listenWatched();
+    listenWishlist();
+  });
+}
+
+initApp();
+</script>
+</body>
+</html>

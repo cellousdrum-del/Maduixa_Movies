@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFC9D2"/>
+      <stop offset="100%" stop-color="#E0334F"/>
+    </linearGradient>
+    <linearGradient id="berry" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FF5C72"/>
+      <stop offset="100%" stop-color="#C81E3A"/>
+    </linearGradient>
+    <radialGradient id="shine" cx="35%" cy="25%" r="60%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="512" height="512" fill="url(#bg)"/>
+
+  <!-- calyx / leaves -->
+  <g>
+    <path d="M256 118 C 214 96, 176 100, 150 130 C 186 122, 214 130, 236 150 Z" fill="#4C9A6A"/>
+    <path d="M256 118 C 298 96, 336 100, 362 130 C 326 122, 298 130, 276 150 Z" fill="#5CAE79"/>
+    <path d="M256 108 C 236 84, 236 60, 256 40 C 276 60, 276 84, 256 108 Z" fill="#4C9A6A"/>
+    <path d="M256 118 C 230 108, 210 116, 196 138 C 222 132, 242 136, 256 150 Z" fill="#5CAE79"/>
+    <path d="M256 118 C 282 108, 302 116, 316 138 C 290 132, 270 136, 256 150 Z" fill="#4C9A6A"/>
+  </g>
+  <rect x="248" y="96" width="16" height="34" rx="8" fill="#3C7A52"/>
+
+  <!-- strawberry body -->
+  <path d="M256 148
+           C 172 148, 118 214, 118 292
+           C 118 384, 190 456, 256 472
+           C 322 456, 394 384, 394 292
+           C 394 214, 340 148, 256 148 Z"
+        fill="url(#berry)"/>
+  <path d="M256 148
+           C 172 148, 118 214, 118 292
+           C 118 384, 190 456, 256 472
+           C 322 456, 394 384, 394 292
+           C 394 214, 340 148, 256 148 Z"
+        fill="url(#shine)"/>
+
+  <!-- seeds -->
+  <g fill="#FFE9A8">
+    <ellipse cx="200" cy="228" rx="6" ry="10" transform="rotate(-20 200 228)"/>
+    <ellipse cx="256" cy="210" rx="6" ry="10"/>
+    <ellipse cx="312" cy="228" rx="6" ry="10" transform="rotate(20 312 228)"/>
+    <ellipse cx="172" cy="284" rx="6" ry="10" transform="rotate(-25 172 284)"/>
+    <ellipse cx="230" cy="270" rx="6" ry="10" transform="rotate(-10 230 270)"/>
+    <ellipse cx="284" cy="270" rx="6" ry="10" transform="rotate(10 284 270)"/>
+    <ellipse cx="340" cy="284" rx="6" ry="10" transform="rotate(25 340 284)"/>
+    <ellipse cx="196" cy="336" rx="6" ry="10" transform="rotate(-20 196 336)"/>
+    <ellipse cx="256" cy="326" rx="6" ry="10"/>
+    <ellipse cx="316" cy="336" rx="6" ry="10" transform="rotate(20 316 336)"/>
+    <ellipse cx="224" cy="388" rx="6" ry="10" transform="rotate(-15 224 388)"/>
+    <ellipse cx="288" cy="388" rx="6" ry="10" transform="rotate(15 288 388)"/>
+    <ellipse cx="256" cy="430" rx="6" ry="10"/>
+  </g>
+</svg>
