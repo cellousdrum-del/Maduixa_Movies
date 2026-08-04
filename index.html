@@ -370,20 +370,19 @@
 </div>
 
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.17.0/firebase-app.js";
 import {
   getFirestore, collection, doc, addDoc, deleteDoc, getDoc,
   onSnapshot, serverTimestamp, writeBatch, query, orderBy
-} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+} from "https://www.gstatic.com/firebasejs/12.17.0/firebase-firestore.js";
 
-// Replace this with the config from your Firebase project settings (Project settings > General > Your apps > Web app).
 const firebaseConfig = {
-  apiKey: "REPLACE_WITH_YOUR_API_KEY",
-  authDomain: "REPLACE_WITH_YOUR_PROJECT.firebaseapp.com",
-  projectId: "REPLACE_WITH_YOUR_PROJECT",
-  storageBucket: "REPLACE_WITH_YOUR_PROJECT.appspot.com",
-  messagingSenderId: "REPLACE_ME",
-  appId: "REPLACE_ME"
+  apiKey: "AIzaSyD7Ry1SOuAHSR4OOjw5Tk67VuU7cA91rVE",
+  authDomain: "maduixa-6f865.firebaseapp.com",
+  projectId: "maduixa-6f865",
+  storageBucket: "maduixa-6f865.firebasestorage.app",
+  messagingSenderId: "214471337401",
+  appId: "1:214471337401:web:8a704c70bded290a274268"
 };
 
 const isConfigured = !!firebaseConfig.apiKey && !firebaseConfig.apiKey.startsWith("REPLACE");
