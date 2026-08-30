@@ -164,6 +164,27 @@
   details.add-box[open] summary{border-bottom:1px solid var(--border);}
 
   form{padding:14px 16px 16px;display:flex;flex-direction:column;gap:12px;}
+
+  .tmdb-search-wrap{position:relative;}
+  .tmdb-search-wrap input{width:100%;}
+  .tmdb-results{
+    position:absolute;left:0;right:0;top:calc(100% + 4px);
+    background:#fff;border:1px solid var(--border);border-radius:10px;
+    box-shadow:var(--shadow);max-height:280px;overflow-y:auto;z-index:30;
+  }
+  .tmdb-results[hidden]{display:none;}
+  .tmdb-row{display:flex;gap:8px;align-items:center;padding:7px 8px;cursor:pointer;border-bottom:1px solid var(--border);}
+  .tmdb-row:last-child{border-bottom:none;}
+  .tmdb-row:active{background:var(--bg);}
+  .tmdb-row img{width:30px;height:45px;border-radius:5px;object-fit:cover;background:var(--bg);flex-shrink:0;}
+  .tmdb-row .ph{width:30px;height:45px;border-radius:5px;background:var(--bg);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:0.9rem;}
+  .tmdb-row-title{font-size:0.85rem;font-weight:600;}
+  .tmdb-row-year{font-size:0.72rem;color:var(--muted);}
+  .tmdb-msg{padding:10px;font-size:0.8rem;color:var(--muted);text-align:center;}
+  .selected-poster-note{display:flex;align-items:center;gap:8px;font-size:0.78rem;color:var(--accent-dark);background:var(--primary-light);padding:6px 10px;border-radius:8px;}
+  .selected-poster-note img{width:24px;height:36px;border-radius:4px;object-fit:cover;}
+  .selected-poster-note button{margin-left:auto;background:none;border:none;color:var(--primary-dark);font-weight:700;cursor:pointer;font-size:0.75rem;}
+
   label{font-size:0.82rem;font-weight:600;color:var(--muted);display:flex;flex-direction:column;gap:5px;}
   input[type=text],input[type=date],input[type=number],select,textarea{
     font-family:inherit;
@@ -213,6 +234,8 @@
     justify-content:space-between;
     gap:8px;
   }
+  .card-poster{width:46px;height:69px;border-radius:8px;object-fit:cover;background:var(--bg);flex-shrink:0;}
+  .card-poster-ph{width:46px;height:69px;border-radius:8px;background:var(--bg);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1.2rem;opacity:0.6;}
   .card-main h3{margin:0 0 4px;font-size:1rem;font-weight:700;}
   .card-main .meta{margin:0;font-size:0.82rem;color:var(--muted);}
   .card-main .notes{margin:6px 0 0;font-size:0.82rem;color:var(--text);font-style:italic;}
@@ -313,6 +336,17 @@
             <span>Marcant «<span id="pending-note-title"></span>» com a vista</span>
             <button type="button" id="cancel-pending">treu l'enllaç</button>
           </div>
+          <div class="tmdb-search-wrap">
+            <label>Cerca a TMDB (opcional, per emplenar títol i pòster)
+              <input type="text" id="watched-tmdb-search" placeholder="🔍 Cerca una pel·lícula...">
+            </label>
+            <div id="watched-tmdb-results" class="tmdb-results" hidden></div>
+          </div>
+          <div id="watched-poster-note" class="selected-poster-note" hidden>
+            <img id="watched-poster-note-img" src="" alt="">
+            <span id="watched-poster-note-text"></span>
+            <button type="button" id="watched-poster-clear">treu</button>
+          </div>
           <label>Títol
             <input type="text" id="watched-title" required placeholder="p. ex. Kill Bill Vol. 1">
           </label>
@@ -342,6 +376,17 @@
       <details class="add-box" id="details-wishlist">
         <summary>+ Afegeix a la llista</summary>
         <form id="form-wishlist">
+          <div class="tmdb-search-wrap">
+            <label>Cerca a TMDB (opcional, per emplenar títol i pòster)
+              <input type="text" id="wishlist-tmdb-search" placeholder="🔍 Cerca una pel·lícula...">
+            </label>
+            <div id="wishlist-tmdb-results" class="tmdb-results" hidden></div>
+          </div>
+          <div id="wishlist-poster-note" class="selected-poster-note" hidden>
+            <img id="wishlist-poster-note-img" src="" alt="">
+            <span id="wishlist-poster-note-text"></span>
+            <button type="button" id="wishlist-poster-clear">treu</button>
+          </div>
           <label>Títol
             <input type="text" id="wishlist-title" required placeholder="p. ex. Dune: Part Two">
           </label>
@@ -387,6 +432,9 @@ const firebaseConfig = {
 
 const isConfigured = !!firebaseConfig.apiKey && !firebaseConfig.apiKey.startsWith("REPLACE");
 
+const TMDB_API_KEY = "95563661fcaf90fb13ecc7b2aadf325a";
+const TMDB_LANG = "ca-ES";
+
 const SEED_WATCHED = [
   { title: "Kill Bill Vol. 1",      dateWatched: "2026-01-10", rating: 9, rewatch: true  },
   { title: "Kill Bill Vol. 2",      dateWatched: "2026-01-14", rating: 9, rewatch: true  },
@@ -418,6 +466,97 @@ function formatDate(iso) {
 
 function setSyncStatus(text) { $("#sync-status").textContent = text; }
 
+/* ---------- TMDB search ---------- */
+
+function posterUrl(path, size) {
+  return path ? `https://image.tmdb.org/t/p/${size}${path}` : null;
+}
+
+async function searchTmdbMovies(qstr) {
+  const url = `https://api.themoviedb.org/3/search/movie?api_key=${TMDB_API_KEY}&language=${TMDB_LANG}&query=${encodeURIComponent(qstr)}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error("TMDB search failed");
+  const data = await res.json();
+  return data.results || [];
+}
+
+let selectedPoster = { watched: null, wishlist: null };
+
+function setupTmdbSearch(prefix) {
+  const input = $(`#${prefix}-tmdb-search`);
+  const results = $(`#${prefix}-tmdb-results`);
+  const titleInput = $(`#${prefix}-title`);
+  const note = $(`#${prefix}-poster-note`);
+  const noteImg = $(`#${prefix}-poster-note-img`);
+  const noteText = $(`#${prefix}-poster-note-text`);
+  const clearBtn = $(`#${prefix}-poster-clear`);
+  let debounceHandle = null;
+  let seq = 0;
+
+  input.addEventListener("input", (e) => {
+    const val = e.target.value.trim();
+    clearTimeout(debounceHandle);
+    if (val.length < 2) { results.hidden = true; return; }
+    debounceHandle = setTimeout(() => runTmdbSearch(val), 400);
+  });
+
+  document.addEventListener("click", (e) => {
+    if (!e.target.closest(`#${prefix}-tmdb-search`) && !e.target.closest(`#${prefix}-tmdb-results`)) {
+      results.hidden = true;
+    }
+  });
+
+  async function runTmdbSearch(qstr) {
+    const mySeq = ++seq;
+    results.hidden = false;
+    results.innerHTML = `<div class="tmdb-msg">Cercant…</div>`;
+    try {
+      const movies = await searchTmdbMovies(qstr);
+      if (mySeq !== seq) return;
+      if (movies.length === 0) {
+        results.innerHTML = `<div class="tmdb-msg">Cap resultat.</div>`;
+        return;
+      }
+      results.innerHTML = "";
+      movies.slice(0, 10).forEach((m) => {
+        const year = (m.release_date || "").slice(0, 4) || "—";
+        const thumb = posterUrl(m.poster_path, "w92");
+        const row = document.createElement("div");
+        row.className = "tmdb-row";
+        row.innerHTML = `
+          ${thumb ? `<img src="${thumb}" alt="">` : `<div class="ph">🎬</div>`}
+          <div>
+            <div class="tmdb-row-title">${escapeHtml(m.title)}</div>
+            <div class="tmdb-row-year">${year}</div>
+          </div>
+        `;
+        row.addEventListener("click", () => {
+          titleInput.value = m.title;
+          selectedPoster[prefix] = m.poster_path || null;
+          noteImg.src = thumb || "";
+          noteImg.hidden = !thumb;
+          noteText.textContent = `Pòster seleccionat: ${m.title}`;
+          note.hidden = false;
+          results.hidden = true;
+          input.value = "";
+        });
+        results.appendChild(row);
+      });
+    } catch (err) {
+      if (mySeq !== seq) return;
+      results.innerHTML = `<div class="tmdb-msg">Error cercant a TMDB.</div>`;
+    }
+  }
+
+  clearBtn.addEventListener("click", () => {
+    selectedPoster[prefix] = null;
+    note.hidden = true;
+  });
+}
+
+setupTmdbSearch("watched");
+setupTmdbSearch("wishlist");
+
 function switchTab(tab) {
   document.querySelectorAll(".tab-btn").forEach((b) => b.classList.toggle("active", b.dataset.tab === tab));
   document.querySelectorAll(".panel").forEach((p) => p.classList.toggle("active", p.id === "panel-" + tab));
@@ -441,7 +580,9 @@ function renderStats() {
 function watchedCard(m) {
   const li = document.createElement("li");
   li.className = "card";
+  const poster = posterUrl(m.posterPath, "w92");
   li.innerHTML = `
+    ${poster ? `<img class="card-poster" src="${poster}" alt="">` : `<div class="card-poster-ph">🎬</div>`}
     <div class="card-main">
       <h3>${escapeHtml(m.title)}</h3>
       <p class="meta">${formatDate(m.dateWatched)} · <span class="rating-pill">${m.rating}/10</span> · ${m.rewatch ? "La tornaria a veure 💚" : "No la tornaria a veure"}</p>
@@ -467,7 +608,9 @@ function renderWatched() {
 function wishlistCard(m) {
   const li = document.createElement("li");
   li.className = "card";
+  const poster = posterUrl(m.posterPath, "w92");
   li.innerHTML = `
+    ${poster ? `<img class="card-poster" src="${poster}" alt="">` : `<div class="card-poster-ph">🎬</div>`}
     <div class="card-main">
       <h3>${escapeHtml(m.title)}</h3>
       <p class="meta">${m.plannedDate ? "Prevista pel " + formatDate(m.plannedDate) : "Sense data prevista"}</p>
@@ -500,6 +643,14 @@ function startMarkAsWatched(item) {
   $("#watched-title").value = item.title;
   $("#pending-note-title").textContent = item.title;
   $("#pending-note").hidden = false;
+  if (item.posterPath) {
+    selectedPoster.watched = item.posterPath;
+    const thumb = posterUrl(item.posterPath, "w92");
+    $("#watched-poster-note-img").src = thumb;
+    $("#watched-poster-note-img").hidden = false;
+    $("#watched-poster-note-text").textContent = `Pòster seleccionat: ${item.title}`;
+    $("#watched-poster-note").hidden = false;
+  }
   $("#watched-title").focus();
   $("#form-watched").scrollIntoView({ behavior: "smooth", block: "center" });
 }
@@ -539,7 +690,8 @@ $("#form-watched").addEventListener("submit", async (e) => {
   const rating = Number($("#watched-rating").value);
   const rewatch = $("#watched-rewatch").value === "si";
   if (!title || !date || Number.isNaN(rating)) return;
-  await addDoc(collection(db, "watched"), { title, dateWatched: date, rating, rewatch, createdAt: serverTimestamp() });
+  const posterPath = selectedPoster.watched || null;
+  await addDoc(collection(db, "watched"), { title, dateWatched: date, rating, rewatch, posterPath, createdAt: serverTimestamp() });
   if (pendingWishlistId) {
     await deleteDoc(doc(db, "wishlist", pendingWishlistId));
     pendingWishlistId = null;
@@ -548,6 +700,8 @@ $("#form-watched").addEventListener("submit", async (e) => {
   e.target.reset();
   $("#watched-date").valueAsDate = new Date();
   $("#details-watched").open = false;
+  selectedPoster.watched = null;
+  $("#watched-poster-note").hidden = true;
 });
 
 $("#form-wishlist").addEventListener("submit", async (e) => {
@@ -557,9 +711,12 @@ $("#form-wishlist").addEventListener("submit", async (e) => {
   const plannedDate = $("#wishlist-date").value || null;
   const notes = $("#wishlist-notes").value.trim();
   if (!title) return;
-  await addDoc(collection(db, "wishlist"), { title, plannedDate, notes, createdAt: serverTimestamp() });
+  const posterPath = selectedPoster.wishlist || null;
+  await addDoc(collection(db, "wishlist"), { title, plannedDate, notes, posterPath, createdAt: serverTimestamp() });
   e.target.reset();
   $("#details-wishlist").open = false;
+  selectedPoster.wishlist = null;
+  $("#wishlist-poster-note").hidden = true;
 });
 
 $("#btn-random").addEventListener("click", () => {
