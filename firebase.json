@@ -1,0 +1,14 @@
+{
+  "hosting": {
+    "site": "maduixa",
+    "public": ".",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**",
+      ".git/**",
+      ".firebaserc",
+      "icon-source.svg"
+    ]
+  }
+}
