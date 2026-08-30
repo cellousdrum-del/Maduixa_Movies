@@ -282,17 +282,27 @@
     padding:24px 12px;
   }
 
-  .date-divider{
+  .year-divider{
     list-style:none;
-    font-size:0.72rem;
+    font-size:1.05rem;
     font-weight:800;
     color:var(--primary-dark);
+    padding:8px 2px 6px;
+    margin-top:14px;
+    border-bottom:2px solid var(--primary-light);
+  }
+  .year-divider:first-child{margin-top:0;}
+
+  .month-divider{
+    list-style:none;
+    font-size:0.72rem;
+    font-weight:700;
+    color:var(--muted);
     text-transform:uppercase;
     letter-spacing:0.06em;
-    padding:2px 4px 0;
-    margin-top:4px;
+    padding:0 4px 0 6px;
+    margin-top:6px;
   }
-  .date-divider:first-child{margin-top:0;}
 
   .stats-grid{
     display:grid;
@@ -529,10 +539,14 @@ function formatDate(iso) {
 }
 
 const CA_MONTHS = ["Gener","Febrer","Març","Abril","Maig","Juny","Juliol","Agost","Setembre","Octubre","Novembre","Desembre"];
-function monthYearLabel(iso) {
+function yearOf(iso) {
   if (!iso) return "";
-  const [y, m] = iso.split("-");
-  return `${CA_MONTHS[parseInt(m, 10) - 1]} ${y}`;
+  return iso.split("-")[0];
+}
+function monthOnlyLabel(iso) {
+  if (!iso) return "";
+  const m = iso.split("-")[1];
+  return CA_MONTHS[parseInt(m, 10) - 1] || "";
 }
 
 function setSyncStatus(text) { $("#sync-status").textContent = text; }
@@ -757,15 +771,25 @@ function renderWatched() {
     empty.hidden = false;
   } else {
     empty.hidden = true;
-    let lastLabel = null;
+    let lastYear = null;
+    let lastMonth = null;
     watchedMovies.forEach((m) => {
-      const label = monthYearLabel(m.dateWatched);
-      if (label && label !== lastLabel) {
-        const divider = document.createElement("li");
-        divider.className = "date-divider";
-        divider.textContent = label;
-        list.appendChild(divider);
-        lastLabel = label;
+      const year = yearOf(m.dateWatched);
+      const month = monthOnlyLabel(m.dateWatched);
+      if (year && year !== lastYear) {
+        const yearDivider = document.createElement("li");
+        yearDivider.className = "year-divider";
+        yearDivider.textContent = year;
+        list.appendChild(yearDivider);
+        lastYear = year;
+        lastMonth = null;
+      }
+      if (month && month !== lastMonth) {
+        const monthDivider = document.createElement("li");
+        monthDivider.className = "month-divider";
+        monthDivider.textContent = month;
+        list.appendChild(monthDivider);
+        lastMonth = month;
       }
       list.appendChild(watchedCard(m));
     });
