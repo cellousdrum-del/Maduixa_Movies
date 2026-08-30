@@ -237,8 +237,12 @@
   .card-poster{width:46px;height:69px;border-radius:8px;object-fit:cover;background:var(--bg);flex-shrink:0;}
   .card-poster-ph{width:46px;height:69px;border-radius:8px;background:var(--bg);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1.2rem;opacity:0.6;}
   .card-main h3{margin:0 0 4px;font-size:1rem;font-weight:700;}
+  .card-main h3 .yr{font-weight:500;color:var(--muted);font-size:0.85em;}
   .card-main .meta{margin:0;font-size:0.82rem;color:var(--muted);}
   .card-main .notes{margin:6px 0 0;font-size:0.82rem;color:var(--text);font-style:italic;}
+  .genre-chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px;}
+  .genre-chip{background:var(--bg);border:1px solid var(--border);color:var(--accent-dark);font-size:0.68rem;
+    font-weight:600;padding:2px 8px;border-radius:999px;}
   .rating-pill{
     display:inline-block;
     background:var(--primary);
@@ -480,7 +484,19 @@ async function searchTmdbMovies(qstr) {
   return data.results || [];
 }
 
+let genreMap = {};
+async function loadGenres() {
+  try {
+    const url = `https://api.themoviedb.org/3/genre/movie/list?api_key=${TMDB_API_KEY}&language=${TMDB_LANG}`;
+    const res = await fetch(url);
+    const data = await res.json();
+    (data.genres || []).forEach((g) => { genreMap[g.id] = g.name; });
+  } catch (err) { console.error("Genre load error", err); }
+}
+loadGenres();
+
 let selectedPoster = { watched: null, wishlist: null };
+let selectedMeta = { watched: { genres: [], year: "" }, wishlist: { genres: [], year: "" } };
 
 function setupTmdbSearch(prefix) {
   const input = $(`#${prefix}-tmdb-search`);
@@ -533,6 +549,10 @@ function setupTmdbSearch(prefix) {
         row.addEventListener("click", () => {
           titleInput.value = m.title;
           selectedPoster[prefix] = m.poster_path || null;
+          selectedMeta[prefix] = {
+            genres: (m.genre_ids || []).map((id) => genreMap[id]).filter(Boolean),
+            year
+          };
           noteImg.src = thumb || "";
           noteImg.hidden = !thumb;
           noteText.textContent = `Pòster seleccionat: ${m.title}`;
@@ -550,6 +570,7 @@ function setupTmdbSearch(prefix) {
 
   clearBtn.addEventListener("click", () => {
     selectedPoster[prefix] = null;
+    selectedMeta[prefix] = { genres: [], year: "" };
     note.hidden = true;
   });
 }
@@ -577,6 +598,11 @@ function renderStats() {
   `;
 }
 
+function genreChipsHtml(genres) {
+  if (!genres || genres.length === 0) return "";
+  return `<div class="genre-chips">${genres.map((g) => `<span class="genre-chip">${escapeHtml(g)}</span>`).join("")}</div>`;
+}
+
 function watchedCard(m) {
   const li = document.createElement("li");
   li.className = "card";
@@ -584,8 +610,9 @@ function watchedCard(m) {
   li.innerHTML = `
     ${poster ? `<img class="card-poster" src="${poster}" alt="">` : `<div class="card-poster-ph">🎬</div>`}
     <div class="card-main">
-      <h3>${escapeHtml(m.title)}</h3>
+      <h3>${escapeHtml(m.title)}${m.year ? ` <span class="yr">(${m.year})</span>` : ""}</h3>
       <p class="meta">${formatDate(m.dateWatched)} · <span class="rating-pill">${m.rating}/10</span> · ${m.rewatch ? "La tornaria a veure 💚" : "No la tornaria a veure"}</p>
+      ${genreChipsHtml(m.genres)}
     </div>
     <button class="icon-btn delete-watched" data-id="${m.id}" aria-label="Elimina">✕</button>
   `;
@@ -612,8 +639,9 @@ function wishlistCard(m) {
   li.innerHTML = `
     ${poster ? `<img class="card-poster" src="${poster}" alt="">` : `<div class="card-poster-ph">🎬</div>`}
     <div class="card-main">
-      <h3>${escapeHtml(m.title)}</h3>
+      <h3>${escapeHtml(m.title)}${m.year ? ` <span class="yr">(${m.year})</span>` : ""}</h3>
       <p class="meta">${m.plannedDate ? "Prevista pel " + formatDate(m.plannedDate) : "Sense data prevista"}</p>
+      ${genreChipsHtml(m.genres)}
       ${m.notes ? `<p class="notes">${escapeHtml(m.notes)}</p>` : ""}
       <div class="card-actions">
         <button class="btn-small mark-watched" data-id="${m.id}">✔ Marca com a vista</button>
@@ -651,6 +679,7 @@ function startMarkAsWatched(item) {
     $("#watched-poster-note-text").textContent = `Pòster seleccionat: ${item.title}`;
     $("#watched-poster-note").hidden = false;
   }
+  selectedMeta.watched = { genres: item.genres || [], year: item.year || "" };
   $("#watched-title").focus();
   $("#form-watched").scrollIntoView({ behavior: "smooth", block: "center" });
 }
@@ -691,7 +720,8 @@ $("#form-watched").addEventListener("submit", async (e) => {
   const rewatch = $("#watched-rewatch").value === "si";
   if (!title || !date || Number.isNaN(rating)) return;
   const posterPath = selectedPoster.watched || null;
-  await addDoc(collection(db, "watched"), { title, dateWatched: date, rating, rewatch, posterPath, createdAt: serverTimestamp() });
+  const { genres, year } = selectedMeta.watched;
+  await addDoc(collection(db, "watched"), { title, dateWatched: date, rating, rewatch, posterPath, genres, year, createdAt: serverTimestamp() });
   if (pendingWishlistId) {
     await deleteDoc(doc(db, "wishlist", pendingWishlistId));
     pendingWishlistId = null;
@@ -701,6 +731,7 @@ $("#form-watched").addEventListener("submit", async (e) => {
   $("#watched-date").valueAsDate = new Date();
   $("#details-watched").open = false;
   selectedPoster.watched = null;
+  selectedMeta.watched = { genres: [], year: "" };
   $("#watched-poster-note").hidden = true;
 });
 
@@ -712,10 +743,12 @@ $("#form-wishlist").addEventListener("submit", async (e) => {
   const notes = $("#wishlist-notes").value.trim();
   if (!title) return;
   const posterPath = selectedPoster.wishlist || null;
-  await addDoc(collection(db, "wishlist"), { title, plannedDate, notes, posterPath, createdAt: serverTimestamp() });
+  const { genres, year } = selectedMeta.wishlist;
+  await addDoc(collection(db, "wishlist"), { title, plannedDate, notes, posterPath, genres, year, createdAt: serverTimestamp() });
   e.target.reset();
   $("#details-wishlist").open = false;
   selectedPoster.wishlist = null;
+  selectedMeta.wishlist = { genres: [], year: "" };
   $("#wishlist-poster-note").hidden = true;
 });
 
