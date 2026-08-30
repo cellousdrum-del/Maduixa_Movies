@@ -282,6 +282,50 @@
     padding:24px 12px;
   }
 
+  .date-divider{
+    list-style:none;
+    font-size:0.72rem;
+    font-weight:800;
+    color:var(--primary-dark);
+    text-transform:uppercase;
+    letter-spacing:0.06em;
+    padding:2px 4px 0;
+    margin-top:4px;
+  }
+  .date-divider:first-child{margin-top:0;}
+
+  .stats-grid{
+    display:grid;
+    grid-template-columns:repeat(2,1fr);
+    gap:10px;
+    margin-bottom:20px;
+  }
+  .stat-box{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding:14px 12px;
+    text-align:center;
+  }
+  .stat-box .num{font-size:1.5rem;font-weight:800;color:var(--primary-dark);}
+  .stat-box .lbl{font-size:0.75rem;color:var(--muted);margin-top:2px;}
+
+  .stats-section{margin-bottom:22px;}
+  .stats-section h3{font-size:0.9rem;font-weight:800;margin:0 0 10px;color:var(--text);}
+
+  .genre-freq-row, .year-row{
+    display:flex;align-items:center;gap:10px;
+    font-size:0.85rem;margin-bottom:8px;
+  }
+  .genre-freq-row .name, .year-row .name{width:92px;flex-shrink:0;font-weight:600;}
+  .genre-freq-row .bar-track, .year-row .bar-track{
+    flex:1;background:var(--primary-light);border-radius:999px;height:10px;overflow:hidden;
+  }
+  .genre-freq-row .bar-fill, .year-row .bar-fill{
+    background:var(--primary);height:100%;border-radius:999px;
+  }
+  .genre-freq-row .count, .year-row .count{width:22px;text-align:right;color:var(--muted);font-size:0.78rem;flex-shrink:0;}
+
   .modal-overlay{
     position:fixed;inset:0;
     background:rgba(58,35,35,0.45);
@@ -327,12 +371,11 @@
   <nav class="tabs">
     <button class="tab-btn active" data-tab="watched">Vistes</button>
     <button class="tab-btn" data-tab="wishlist">Vull veure</button>
+    <button class="tab-btn" data-tab="stats">Estadístiques</button>
   </nav>
 
   <main>
     <section id="panel-watched" class="panel active">
-      <div class="stats" id="stats-watched"></div>
-
       <details class="add-box" id="details-watched">
         <summary>+ Afegeix una pel·lícula vista</summary>
         <form id="form-watched">
@@ -407,6 +450,23 @@
       <ul class="cards" id="list-wishlist"></ul>
       <p class="empty" id="empty-wishlist" hidden>Encara no hi ha cap pel·lícula a la llista de "Vull veure".</p>
     </section>
+
+    <section id="panel-stats" class="panel">
+      <div class="stats-grid" id="stats-numbers"></div>
+      <div class="stats-section" id="stats-bestworst-section" hidden>
+        <h3>🏆 Millor i pitjor valorada</h3>
+        <div class="stats" id="stats-bestworst"></div>
+      </div>
+      <div class="stats-section" id="stats-genres-section" hidden>
+        <h3>🎭 Gèneres més vistos</h3>
+        <div id="stats-genres"></div>
+      </div>
+      <div class="stats-section" id="stats-years-section" hidden>
+        <h3>📅 Pel·lícules per any</h3>
+        <div id="stats-years"></div>
+      </div>
+      <p class="empty" id="empty-stats" hidden>Encara no hi ha prou dades per mostrar estadístiques.</p>
+    </section>
   </main>
 </div>
 
@@ -466,6 +526,13 @@ function formatDate(iso) {
   if (!iso) return "";
   const [y, m, d] = iso.split("-");
   return `${d}/${m}/${y}`;
+}
+
+const CA_MONTHS = ["Gener","Febrer","Març","Abril","Maig","Juny","Juliol","Agost","Setembre","Octubre","Novembre","Desembre"];
+function monthYearLabel(iso) {
+  if (!iso) return "";
+  const [y, m] = iso.split("-");
+  return `${CA_MONTHS[parseInt(m, 10) - 1]} ${y}`;
 }
 
 function setSyncStatus(text) { $("#sync-status").textContent = text; }
@@ -584,18 +651,81 @@ function switchTab(tab) {
 }
 document.querySelectorAll(".tab-btn").forEach((b) => b.addEventListener("click", () => switchTab(b.dataset.tab)));
 
-function renderStats() {
-  const box = $("#stats-watched");
-  if (watchedMovies.length === 0) { box.innerHTML = ""; return; }
+function renderStatsPanel() {
+  const numbersBox = $("#stats-numbers");
+  const emptyMsg = $("#empty-stats");
+  const bestworstSection = $("#stats-bestworst-section");
+  const genresSection = $("#stats-genres-section");
+  const yearsSection = $("#stats-years-section");
+
+  if (watchedMovies.length === 0) {
+    numbersBox.innerHTML = "";
+    bestworstSection.hidden = true;
+    genresSection.hidden = true;
+    yearsSection.hidden = true;
+    emptyMsg.hidden = false;
+    return;
+  }
+  emptyMsg.hidden = true;
+
+  const total = watchedMovies.length;
+  const avgRating = (watchedMovies.reduce((sum, m) => sum + (m.rating || 0), 0) / total).toFixed(1);
+  const rewatchPct = Math.round((watchedMovies.filter((m) => m.rewatch).length / total) * 100);
+
+  numbersBox.innerHTML = `
+    <div class="stat-box"><div class="num">${total}</div><div class="lbl">Pel·lícules vistes</div></div>
+    <div class="stat-box"><div class="num">${avgRating}</div><div class="lbl">Nota mitjana</div></div>
+    <div class="stat-box"><div class="num">${rewatchPct}%</div><div class="lbl">Les repetiries</div></div>
+    <div class="stat-box"><div class="num">${wishlistMovies.length}</div><div class="lbl">A la llista</div></div>
+  `;
+
   let best = watchedMovies[0], worst = watchedMovies[0];
   watchedMovies.forEach((m) => {
     if (m.rating > best.rating) best = m;
     if (m.rating < worst.rating) worst = m;
   });
-  box.innerHTML = `
+  bestworstSection.hidden = false;
+  $("#stats-bestworst").innerHTML = `
     <div class="stat-chip best">🏆 Millor valorada: <strong>${escapeHtml(best.title)}</strong> (${best.rating}/10)</div>
     <div class="stat-chip worst">🥲 Pitjor valorada: <strong>${escapeHtml(worst.title)}</strong> (${worst.rating}/10)</div>
   `;
+
+  const genreCounts = {};
+  watchedMovies.forEach((m) => (m.genres || []).forEach((g) => { genreCounts[g] = (genreCounts[g] || 0) + 1; }));
+  const topGenres = Object.entries(genreCounts).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  if (topGenres.length > 0) {
+    genresSection.hidden = false;
+    const maxGenreCount = topGenres[0][1];
+    $("#stats-genres").innerHTML = topGenres.map(([name, count]) => `
+      <div class="genre-freq-row">
+        <span class="name">${escapeHtml(name)}</span>
+        <span class="bar-track"><span class="bar-fill" style="width:${(count / maxGenreCount) * 100}%"></span></span>
+        <span class="count">${count}</span>
+      </div>
+    `).join("");
+  } else {
+    genresSection.hidden = true;
+  }
+
+  const yearCounts = {};
+  watchedMovies.forEach((m) => {
+    const y = (m.dateWatched || "").slice(0, 4);
+    if (y) yearCounts[y] = (yearCounts[y] || 0) + 1;
+  });
+  const yearEntries = Object.entries(yearCounts).sort((a, b) => b[0].localeCompare(a[0]));
+  if (yearEntries.length > 0) {
+    yearsSection.hidden = false;
+    const maxYearCount = Math.max(...yearEntries.map(([, c]) => c));
+    $("#stats-years").innerHTML = yearEntries.map(([year, count]) => `
+      <div class="year-row">
+        <span class="name">${year}</span>
+        <span class="bar-track"><span class="bar-fill" style="width:${(count / maxYearCount) * 100}%"></span></span>
+        <span class="count">${count}</span>
+      </div>
+    `).join("");
+  } else {
+    yearsSection.hidden = true;
+  }
 }
 
 function genreChipsHtml(genres) {
@@ -627,9 +757,20 @@ function renderWatched() {
     empty.hidden = false;
   } else {
     empty.hidden = true;
-    watchedMovies.forEach((m) => list.appendChild(watchedCard(m)));
+    let lastLabel = null;
+    watchedMovies.forEach((m) => {
+      const label = monthYearLabel(m.dateWatched);
+      if (label && label !== lastLabel) {
+        const divider = document.createElement("li");
+        divider.className = "date-divider";
+        divider.textContent = label;
+        list.appendChild(divider);
+        lastLabel = label;
+      }
+      list.appendChild(watchedCard(m));
+    });
   }
-  renderStats();
+  renderStatsPanel();
 }
 
 function wishlistCard(m) {
@@ -662,6 +803,7 @@ function renderWishlist() {
     empty.hidden = true;
     wishlistMovies.forEach((m) => list.appendChild(wishlistCard(m)));
   }
+  renderStatsPanel();
 }
 
 function startMarkAsWatched(item) {
